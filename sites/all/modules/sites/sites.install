@@ -1,0 +1,123 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the sites module.
+ */
+
+/**
+ * Implements hook_uninstall().
+ */
+function sites_uninstall() {
+  db_delete('purl')
+  ->condition('provider', 'sites')
+  ->execute();
+}
+
+/**
+ * Implements hook_enable().
+ */
+function sites_enable() {
+  /* Needs to be loaded after the context module */
+  db_update('system')
+  ->fields(array(
+    'weight' => 1,
+  ))
+  ->condition('name', 'sites')
+  ->condition('type', 'module')
+  ->execute();
+}
+
+/**
+ * Implements hook_schema().
+ */
+function sites_schema() {
+  $schema = array();
+  $schema['sites'] = array(
+    'description' => 'sites',
+    'fields' => array(
+      'sid' => array(
+        'description' => 'The site id.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'primary key' => TRUE,
+        'unique' => TRUE,
+      ),
+      'title' => array(
+        'description' => 'The site\'s administrative title.',
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'purl_prefix' => array(
+        'description' => 'The PURL prefix.',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'name' => array(
+        'description' => 'Name of the site.',
+        'type' => 'varchar',
+        'length' => 256,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'front_page' => array(
+        'description' => 'Front page of the site.',
+        'type' => 'varchar',
+        'length' => 256,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'menu_main_menu' => array(
+        'description' => 'Which menu to use as main menu.',
+        'type' => 'varchar',
+        'length' => 256,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'menu_secondary_menu' => array(
+        'description' => 'Which menu to use as secondary menu.',
+        'type' => 'varchar',
+        'length' => 256,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+    ),
+    'primary key' => array('sid'),
+  );
+
+  $schema['site_node'] = array(
+    'description' => 'site_node',
+    'fields' => array(
+      'sid' => array(
+        'description' => 'The site id.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'primary key' => TRUE,
+        'unique' => TRUE,
+        'default' => 0,
+      ),
+      'nid' => array(
+        'description' => 'The node id.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'primary key' => TRUE,
+        'unique' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'indexes' => array(
+      'sid' => array('sid'),
+      'nid' => array('nid'),
+    ),
+    'primary key' => array('sid', 'nid'),
+  );
+
+  return $schema;
+}

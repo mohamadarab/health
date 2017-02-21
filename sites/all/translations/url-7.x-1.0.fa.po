@@ -1,0 +1,28 @@
+# Persian, Farsi translation of URL field (7.x-1.0)
+# Copyright (c) 2013 by the Persian, Farsi translation team
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: URL field (7.x-1.0)\n"
+"POT-Creation-Date: 2013-11-26 19:25+0000\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Language-Team: Persian, Farsi\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n!=1);\n"
+
+msgid "Title"
+msgstr "عنوان"
+msgid "Link"
+msgstr "پیوند"
+msgid "URL"
+msgstr "نشانی"
+msgid "Fields"
+msgstr "فیلدها"
+msgid "About"
+msgstr "درباره"
+msgid "Add rel=\"nofollow\" to all links"
+msgstr "افزودن rel=\"nofollow\" به تمام پیوندها"
+msgid "Enable <em>Title</em> field"
+msgstr "فیلد <em>عنوان</em> را فعال کن"

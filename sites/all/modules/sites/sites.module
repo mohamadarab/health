@@ -1,0 +1,353 @@
+<?php
+
+/**
+ * @file
+ * Integrates the PURL module directly with Context, Views, and other modules.
+ */
+
+include DRUPAL_ROOT . '/' . drupal_get_path('module', 'sites') . '/site.inc';
+include DRUPAL_ROOT . '/' . drupal_get_path('module', 'sites') . '/sites.context.inc';
+include DRUPAL_ROOT . '/' . drupal_get_path('module', 'sites') . '/sites.core.inc';
+include DRUPAL_ROOT . '/' . drupal_get_path('module', 'sites') . '/sites.purl.inc';
+include DRUPAL_ROOT . '/' . drupal_get_path('module', 'sites') . '/sites.views.inc';
+
+/**
+ * Implements hook_init().
+ */
+function sites_init() {
+  if (function_exists('strongarm_set_conf')) {
+    // Reset strongarm configuration.
+    strongarm_set_conf(TRUE);
+  }
+
+  // Set current site name
+  global $conf;
+  $site = sites_get_current_site();
+  if (!empty($site)) {
+    $conf['site_name'] = $site->name;
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function sites_menu() {
+  $items['admin/structure/sites'] = array(
+    'title' => 'Sites',
+    'description' => 'Manage sites.',
+    'page callback' => 'theme',
+    'page arguments' => array('sites_list_sites'),
+    'access arguments' => array('administer sites'),
+    'file' => 'sites.admin.inc',
+  );
+
+  $items['admin/structure/sites/add'] = array(
+    'title' => 'Add site',
+    'description' => '',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sites_site_form'),
+    'access arguments' => array('administer sites'),
+    'type' => MENU_LOCAL_ACTION,
+    'file' => 'sites.admin.inc',
+  );
+
+  $items['admin/structure/sites/edit/%'] = array(
+    'title' => 'Edit site',
+    'description' => '',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sites_site_form', 4),
+    'access arguments' => array('administer sites'),
+    'file' => 'sites.admin.inc',
+  );
+
+  $items['admin/structure/sites/delete/%'] = array(
+    'title' => 'Delete site',
+    'description' => '',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sites_site_delete_form', 4),
+    'access arguments' => array('administer sites'),
+    'file' => 'sites.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function sites_theme($existing, $type, $theme, $path) {
+  return array(
+    'sites_list_sites' => array(
+      'variables' => array(),
+      'file' => 'sites.admin.inc',
+    ),
+  );
+}
+
+/**
+ * Implements template_preprocess_page.
+ */
+function sites_preprocess_page(&$vars) {
+  // Some themes acquire their primary_links and secondary_links variables via
+  // these variables.  For themes that do not, we have provided a Strongarm
+  // implementation in sites_strongarm()
+  if ($pl = sites_get_current_menu_source('main_menu')) {
+    $vars['main_menu'] = menu_navigation_links($pl);
+  }
+
+  if ($sl = sites_get_current_menu_source('secondary_menu')) {
+    $vars['secondary_menu'] = menu_navigation_links($sl);
+  }
+}
+
+/**
+ * Implements hook_permission().
+ */
+function sites_permission() {
+  return array(
+    'administer sites' => array(
+      'title' => t('administer sites'),
+      'description' => t('TODO Add a description for \'administer sites\''),
+    ),
+  );
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function sites_form_alter(&$form, &$form_state, $form_id) {
+  if (isset($form['type']) && isset($form['#node'])) {
+    if ($form['type']['#value'] . '_node_form' == $form_id) {
+      $node = $form['#node'];
+
+      $sites = _sites_get_sites();
+      $options = array();
+      foreach ($sites as $site) {
+        $options[$site->sid] = $site->title;
+      }
+
+      $default = array();
+      if (isset($node->sites)) {
+        foreach ($node->sites as $site) {
+          $default[$site->sid] = $site->sid;
+        }
+      }
+
+      $form['sites-options'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Sites'),
+        '#collapsible' => TRUE,
+        '#collapsed' =>  TRUE,
+        '#group' => 'additional_settings',
+      );
+      $form['sites-options']['sites'] = array(
+        '#title' => t('Sites'),
+        '#description' => t('Select site to publish this node to. Leaving blank will allow node to be published everywhere.'),
+        '#type' => 'checkboxes',
+        '#size' => 5,
+        '#multiple' => TRUE,
+        '#parents' => array('sites'),
+        '#default_value' => $default,
+        '#options' => $options,
+        '#attached' => array(
+          'js' => array(drupal_get_path('module', 'sites') . '/sites.node.js'),
+        ),
+      );
+    }
+  }
+}
+
+/**
+ * Implements hook_node_load().
+ */
+function sites_node_load($nodes, $types) {
+  foreach ($nodes as $node) {
+    $node->sites = sites_get_node_sites($node->nid);
+  }
+}
+
+/**
+ * Implements hook_node_insert().
+ */
+function sites_node_insert($node) {
+  _sites_attach_node_to_sites($node->nid, (array) array_filter($node->sites));
+}
+
+/**
+ * Implements hook_node_update().
+ */
+function sites_node_update($node) {
+  _sites_attach_node_to_sites($node->nid, (array) array_filter($node->sites));
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function sites_block_info() {
+  $block = array();
+  $block['current_site']['info'] = t('Current site information');
+  return $block;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function sites_block_view($delta) {
+  switch ($delta) {
+
+    case 'current_site':
+      $block = array(
+        'subject' => t('Current Site'),
+        'content' => sites_block_sites(),
+      );
+      break;
+
+    default:
+      break;
+  }
+
+  return $block;
+}
+
+/**
+ * Block with current site information.
+ */
+function sites_block_sites() {
+  $site = sites_get_current_site();
+
+  $output = '';
+  if (!empty($site)) {
+    $output .= "
+      <div class='row'>
+        <span class='label'>SID:</span>
+        <span class='field sid'>{$site->sid}</span>
+      </div>
+      <div class='row'>
+        <span class='label'>Administrative title:</span>
+        <span class='field title'>{$site->title}</span>
+      </div>
+      <div class='row'>
+        <span class='label'>Name:</span>
+        <span class='field name'>{$site->name}</span>
+      </div>
+      <div class='row'>
+        <span class='label'>PURL prefix:</span>
+        <span class='field purl_prefix'>{$site->purl_prefix}</span>
+      </div>
+      <div class='row'>
+        <span class='label'>Front page:</span>
+        <span class='field front_page'>{$site->front_page}</span>
+      </div>
+      <div class='row'>
+        <span class='label'>Primary links:</span>
+        <span class='field menu_main_menu'>{$site->menu_main_menu}</span>
+      </div>
+      <div class='row'>
+        <span class='label'>Secondary links:</span>
+        <span class='field menu_secondary_menu'>{$site->menu_secondary_menu}</span>
+      </div>
+
+    ";
+  }
+  return $output;
+}
+
+/**
+ * Check the implementation of hook_sites_access with the heaviest weight
+ * as to whether the node should be accessible.
+ *
+ * @param $node
+ *   Node object.
+ *
+ * @return
+ *   Boolean.
+ */
+function sites_access($node) {
+  // Access is based on the heaviest weighted module's response
+  $modules = module_implements('sites_access');
+  $last = $modules[count($modules) - 1];
+  $permitted = module_invoke($last, 'sites_access', $node);
+
+  return $permitted;
+}
+
+/**
+ * Implements hook_sites_access().
+ */
+function sites_sites_access($node) {
+  if (isset($node->sites) && count($node->sites)) {
+    return in_array(sites_get_current_sid(), array_keys($node->sites));
+  }
+  else {
+    // allow nodes without a defined site to be accessed freely
+    return TRUE;
+  }
+}
+
+/**
+ * Implements hook_menu_alter().
+ */
+function sites_menu_alter(&$items) {
+  $items['node/%node']['access callback'] = 'sites_menu_access_override_node_view';
+}
+
+/**
+ * Wrapper for node_access that allows site_access to preempt default node access rules.
+ */
+function sites_menu_access_override_node_view($op, $node) {
+  if (!sites_access($node)) {
+    return FALSE;
+  }
+  else {
+    return node_access($op, $node);
+  }
+}
+
+/**
+ * Implements hook_strongarm().
+ */
+function sites_strongarm() {
+  $site = sites_get_current_site();
+
+  if ($site) {
+    $export = array();
+
+    // primary links
+    $main = sites_get_current_menu_source('main_menu');
+    if ($main) {
+      $strongarm = new stdClass;
+      $strongarm->disabled = FALSE;
+      $strongarm->api_version = 1;
+      $strongarm->name = 'menu_main_menu_source';
+      $strongarm->value = $primary;
+
+      $export['menu_main_menu_source'] = $strongarm;
+    }
+
+    // secondary links
+    $secondary = sites_get_current_menu_source('secondary_menu');
+    if ($secondary) {
+      $strongarm = new stdClass;
+      $strongarm->disabled = FALSE;
+      $strongarm->api_version = 1;
+      $strongarm->name = 'menu_secondary_menu_source';
+      $strongarm->value = $secondary;
+
+      $export['menu_secondary_menu_source'] = $strongarm;
+    }
+
+    return $export;
+  }
+}
+
+/**
+ * Notify CTools that we'll be using the plugin API with Context and Strongarm modules.
+ */
+function sites_ctools_plugin_api($module, $api) {
+  if ($module == 'context' && $api == 'plugins') {
+    return array('version' => 3);
+  }
+  elseif ($module == "strongarm" && $api == "strongarm") {
+    return array("version" => 1);
+  }
+}

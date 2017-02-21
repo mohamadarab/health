@@ -1,0 +1,60 @@
+name = Iranhealth
+description = "iranhealth - Responsive Multi-Purpose Negarandedanesh Theme"
+core = 7.x
+package = Core
+
+
+
+regions[social] = Social
+regions[login-menu] = Login-menu
+regions[menu] = Menu
+regions[slider] = Slider
+regions[agahi] = Agahi
+regions[grouping] = Grouping
+regions[article] = Article
+regions[comment] = Comment
+regions[service] = Service
+regions[content] = Content
+regions[client] = Client
+regions[newsletter] = Newsletter
+regions[contact] = Contact
+regions[link] = Link
+regions[about] = About
+regions[p-contact] = P-Contact
+regions[search] = Search
+regions[text] = Text
+regions[tag] = Tag
+regions[special] = Special
+regions[relation] = Relation
+regions[relation-article] = Relation-Article
+regions[map] = map
+
+
+
+
+stylesheets[all][] = css/style.css
+stylesheets[all][] = css/bootstrap.min.css
+stylesheets[all][] = css/bootstrap-theme.min.css
+stylesheets[all][] = css/font-awesome.min.css
+stylesheets[all][] = css/flexslider.css
+stylesheets[all][] = css/select-theme-default.css
+stylesheets[all][] = css/owl.carousel.css
+stylesheets[all][] = css/owl.theme.css
+
+
+
+
+
+scripts[] = 'js/jquery-2.1.0.min.js'
+scripts[] = 'js/bootstrap.min.js'
+scripts[] = 'js/jquery.flexslider-min.js'
+scripts[] = 'js/select.min.js'
+scripts[] = 'js/owl.carousel.min.js'
+scripts[] = 'js/script.js'
+scripts[] = 'js/main.js'
+
+
+; Information added by Negarandedanesh.com packaging script on 2016-07-09
+version = "7.50"
+project = "drupal"
+datestamp = "09384363798"
